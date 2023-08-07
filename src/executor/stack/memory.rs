@@ -397,7 +397,7 @@ impl<'config> MemoryStackSubstate<'config> {
 
 #[derive(Debug)]
 pub struct MemoryStackState<'backend, 'config, B> {
-	backend: &'backend mut B,
+	backend: &'backend B,
 	substate: MemoryStackSubstate<'config>,
 }
 
@@ -554,7 +554,7 @@ impl<'backend, 'config, B: Backend> StackState<'config> for MemoryStackState<'ba
 }
 
 impl<'backend, 'config, B: Backend> MemoryStackState<'backend, 'config, B> {
-	pub fn new(metadata: StackSubstateMetadata<'config>, backend: &'backend mut B) -> Self {
+	pub fn new(metadata: StackSubstateMetadata<'config>, backend: &'backend B) -> Self {
 		Self {
 			backend,
 			substate: MemoryStackSubstate::new(metadata),
