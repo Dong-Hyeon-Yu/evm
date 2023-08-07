@@ -163,11 +163,7 @@ impl<'vicinity> Backend for MemoryBackend<'vicinity> {
 }
 
 impl<'vicinity> ApplyBackend for MemoryBackend<'vicinity> {
-	fn apply<A, I, L>(&mut self, values: A, logs: L, delete_empty: bool)
-	where
-		A: IntoIterator<Item = Apply<I>>,
-		I: IntoIterator<Item = (H256, H256)>,
-		L: IntoIterator<Item = Log>,
+	fn apply(&mut self, values: Vec<Apply>, logs: Vec<Log>, delete_empty: bool)
 	{
 		for apply in values {
 			match apply {

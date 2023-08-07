@@ -5,7 +5,7 @@
 mod memory;
 
 pub use self::memory::{MemoryAccount, MemoryBackend, MemoryVicinity};
-use alloc::vec::Vec;
+use alloc::{vec::Vec, collections::BTreeMap};
 use primitive_types::{H160, H256, U256};
 /// Basic account information.
 #[derive(Clone, Eq, PartialEq, Debug, Default)]
@@ -25,7 +25,7 @@ pub use ethereum::Log;
 
 /// Apply state operation.
 #[derive(Clone, Debug)]
-pub enum Apply<I> {
+pub enum Apply {
 	/// Modify or create at address.
 	Modify {
 		/// Address.
@@ -35,7 +35,7 @@ pub enum Apply<I> {
 		/// Code. `None` means leaving it unchanged.
 		code: Option<Vec<u8>>,
 		/// Storage iterator.
-		storage: I,
+		storage: BTreeMap<H256, H256>,
 		/// Whether storage should be wiped empty before applying the storage
 		/// iterator.
 		reset_storage: bool,
@@ -88,9 +88,5 @@ pub trait Backend {
 /// EVM backend that can apply changes.
 pub trait ApplyBackend {
 	/// Apply given values and logs at backend.
-	fn apply<A, I, L>(&mut self, values: A, logs: L, delete_empty: bool)
-	where
-		A: IntoIterator<Item = Apply<I>>,
-		I: IntoIterator<Item = (H256, H256)>,
-		L: IntoIterator<Item = Log>;
+	fn apply(&mut self, values: Vec<Apply>, logs: Vec<Log>, delete_empty: bool);
 }
