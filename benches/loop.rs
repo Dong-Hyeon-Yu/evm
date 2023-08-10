@@ -42,7 +42,7 @@ fn run_loop_contract() {
 		},
 	);
 
-	let backend = MemoryBackend::new(&vicinity, state);
+	let backend = MemoryBackend::new(vicinity, state);
 	let metadata = StackSubstateMetadata::new(u64::MAX, &config);
 	let state = MemoryStackState::new(metadata, &backend);
 	let precompiles = BTreeMap::new();

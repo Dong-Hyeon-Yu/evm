@@ -58,15 +58,15 @@ pub struct MemoryAccount {
 
 /// Memory backend, storing all state values in a `BTreeMap` in memory.
 #[derive(Clone, Debug)]
-pub struct MemoryBackend<'vicinity> {
-	vicinity: &'vicinity MemoryVicinity,
+pub struct MemoryBackend {
+	vicinity: MemoryVicinity,
 	state: BTreeMap<H160, MemoryAccount>,
 	logs: Vec<Log>,
 }
 
-impl<'vicinity> MemoryBackend<'vicinity> {
+impl MemoryBackend {
 	/// Create a new memory backend.
-	pub fn new(vicinity: &'vicinity MemoryVicinity, state: BTreeMap<H160, MemoryAccount>) -> Self {
+	pub fn new(vicinity: MemoryVicinity, state: BTreeMap<H160, MemoryAccount>) -> Self {
 		Self {
 			vicinity,
 			state,
@@ -85,7 +85,7 @@ impl<'vicinity> MemoryBackend<'vicinity> {
 	}
 }
 
-impl<'vicinity> Backend for MemoryBackend<'vicinity> {
+impl Backend for MemoryBackend {
 	fn gas_price(&self) -> U256 {
 		self.vicinity.gas_price
 	}
@@ -162,7 +162,7 @@ impl<'vicinity> Backend for MemoryBackend<'vicinity> {
 	}
 }
 
-impl<'vicinity> ApplyBackend for MemoryBackend<'vicinity> {
+impl ApplyBackend for MemoryBackend {
 	fn apply(&mut self, values: Vec<Apply>, logs: Vec<Log>, delete_empty: bool)
 	{
 		for apply in values {
