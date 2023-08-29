@@ -26,6 +26,19 @@ evm-core = { version = "0.39", path = "core", default-features = false }
 evm-gasometer = { version = "0.39", path = "gasometer", default-features = false }
 evm-runtime = { version = "0.39", path = "runtime", default-features = false }
 
+# for debug
+hex = "0.4"
+tracing = "0.1.37"
+tracing-appender = "0.2.2"
+tracing-subscriber = { version = "0.3.15", default-features = false, features = ["std", "smallvec", "fmt", "ansi", "time", "json", "registry", "env-filter"] }
+ethers-core = { version = "^2.0.0" }
+tokio = {version = "1.32", features = ["full"]}
+futures = "0.3.28"
+# tokio-retry = "0.3"
+# tokio-rustls = "0.23"
+# tokio-util = "0.7.4"
+
+
 [dev-dependencies]
 criterion = "0.4"
 hex = "0.4"
@@ -35,7 +48,7 @@ name = "loop"
 harness = false
 
 [features]
-default = ["std"]
+default = ["std", "tracing"]
 std = [
 	"ethereum/std",
 	"log/std",
