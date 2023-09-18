@@ -1,26 +1,26 @@
 use std::{str::FromStr, collections::BTreeMap};
+use ethers_core::types::transaction::eip2718::TypedTransaction;
 use evm::{
 	executor::stack::StackState, 
 	tracing::{EventListener, Event}, 
-	execution_storage::{MemoryStorage, ExecutionBackend}, backend::{MemoryVicinity, MemoryAccount, MemoryBackend}};
+	execution_storage::{MemoryStorage, ExecutionBackend, CONTRACT_BYTECODE}, backend::{MemoryVicinity, MemoryAccount, MemoryBackend}};
 use primitive_types::{U256, H160};
-use tracing::{info, debug};
+use rlp::Rlp;
+use tracing::info;
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::filter::LevelFilter;
 use tracing::subscriber::set_global_default;
 use futures::future::join_all;
 
-const CONTRACT_BYTECODE: &str = include_str!("contracts/SmallBank.bin");
-
 #[tokio::main]
 async fn main() {
-	let _ = DebugEventListener::new();
-
-	// tx_execution_serial();
+	let _ = &DebugEventListener::new();
+	
+	tx_execution_serial();
 
 	// tx_execution_async().await;
 
-	contract_deploy();
+	// contract_deploy();
 }
 
 #[allow(dead_code)]
@@ -69,6 +69,7 @@ async fn tx_execution_async() {
 				let storage = MemoryStorage::new(backend, BTreeMap::new());
 				let mut executor = storage.executor();
 
+
 				let (reason, _) = executor.transact_call(
 					H160::from_str("0xe14de1592b52481b94b99df4e9653654e14fffb6").unwrap(),
 					H160::from_str("0x1000000000000000000000000000000000000000").unwrap(),
@@ -95,25 +96,27 @@ pub fn tx_execution_serial() {
 	for _ in 0..10 {
 		let mut executor = execution_state.executor();
 		
+		let raw_tx = hex::decode("02f8f509887d0b53721cd770f6808088ffffffffffffffff94100000000000000000000000000000000000000080b8840be8374d0000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000000700000000000000000000000000000000000000000000000000000000000000053930383531000000000000000000000000000000000000000000000000000000c080a0bde42a3e09ccdc41d2729fc9d2ae0d54418dab8fa6e513984323e74b94a57b4ba07258cb57ad993e0048b0e05e8c2997d9b25f4a3df391738db275271a8a532485").unwrap();
+		
+		let tx = validate(raw_tx.as_slice());
+
 		let (reason, _) = executor.transact_call(
 			H160::from_str("0xe14de1592b52481b94b99df4e9653654e14fffb6").unwrap(),
-			H160::from_str("0x1000000000000000000000000000000000000000").unwrap(),
-			U256::zero(),
-			hex::decode("870187eb0000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000000500000000000000000000000000000000000000000000000000000000000000053434373336000000000000000000000000000000000000000000000000000000")
-				.unwrap(),
-			// hex::decode("0f14a4060000000000000000000000000000000000000000000000000000000000002ee0").unwrap(),
-			50002,
+			tx.to_addr().unwrap().to_owned(),
+			tx.value().unwrap().to_owned(),
+			tx.data().unwrap().to_owned().to_vec(),
+			tx.gas().unwrap().to_owned().as_u64(),
 			Vec::new(),
 		);
 
 		info!("{reason:?}");
-		info!("gas snapshot: {:?}", executor.state().metadata().gasometer().snapshot());
 		let (effects, logs) = executor.into_state().deconstruct();
-		info!("{:?}", effects);
-		info!("{:?}", logs);
-
+		info!("{:?}\n\n", effects);
 		execution_state.apply_local_effect(effects, logs);
 	}
+		
+
+	info!("final state {:?}", execution_state.executor().state());
 }
 
 #[allow(dead_code)]
@@ -162,6 +165,26 @@ pub fn contract_deploy() {
 
 }
 
+/// Determines if a transaction valid for the worker to consider putting in a batch
+fn validate(t: &[u8]) -> TypedTransaction { 
+
+	let rlp = Rlp::new(t);
+	
+	match TypedTransaction::decode_signed(&rlp) {
+		Ok((tx, sig)) => {
+			if let Err(e) = sig.verify(tx.sighash(), *tx.from().unwrap()) {
+				panic!("invalid tx signature: {:?}", e);
+			}
+			info!("tx: {:?}", tx);
+			tx
+		},
+		Err(e) => {
+			panic!("invalid tx: {:?}", e);
+		}
+	}
+}
+
+
 struct DebugEventListener;
 
 impl DebugEventListener {
@@ -189,6 +212,6 @@ impl DebugEventListener {
 impl EventListener for DebugEventListener {
 
 	fn event(&mut self, event: Event<'_>) {
-		debug!("{:?}", event);
+		info!("{:?}", event);
 	}
 }
