@@ -86,12 +86,13 @@ impl MemoryStorage {
         )
     }
 
-    pub fn executor(&self) -> StackExecutor<MemoryStackState<MemoryBackend>, BTreeMap<H160, PrecompileFn>> {
+    pub fn executor(&self, simulation: bool) -> StackExecutor<MemoryStackState<MemoryBackend>, BTreeMap<H160, PrecompileFn>> {
 
         StackExecutor::new_with_precompiles(
             MemoryStackState::new(StackSubstateMetadata::new(DEFAULT_TX_GAS_LIMIT, self.config()), &self.backend),
             self.config(),
             self.precompiles(),
+            simulation
         )
     }
 }

@@ -16,7 +16,9 @@ use futures::future::join_all;
 async fn main() {
 	let _ = &DebugEventListener::new();
 	
-	tx_execution_serial();
+	tx_simulation_serial();
+
+	// tx_execution_serial();
 
 	// tx_execution_async().await;
 
@@ -67,7 +69,7 @@ async fn tx_execution_async() {
 		handles.push(
 			tokio::spawn(async move {
 				let storage = MemoryStorage::new(backend, BTreeMap::new());
-				let mut executor = storage.executor();
+				let mut executor = storage.executor(false);
 
 
 				let (reason, _) = executor.transact_call(
@@ -94,7 +96,7 @@ pub fn tx_execution_serial() {
 	let mut execution_state = MemoryStorage::default();
 
 	for _ in 0..10 {
-		let mut executor = execution_state.executor();
+		let mut executor = execution_state.executor(false);
 		
 		let raw_tx = hex::decode("02f8f509887d0b53721cd770f6808088ffffffffffffffff94100000000000000000000000000000000000000080b8840be8374d0000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000000700000000000000000000000000000000000000000000000000000000000000053930383531000000000000000000000000000000000000000000000000000000c080a0bde42a3e09ccdc41d2729fc9d2ae0d54418dab8fa6e513984323e74b94a57b4ba07258cb57ad993e0048b0e05e8c2997d9b25f4a3df391738db275271a8a532485").unwrap();
 		
@@ -114,9 +116,6 @@ pub fn tx_execution_serial() {
 		info!("{:?}\n\n", effects);
 		execution_state.apply_local_effect(effects, logs);
 	}
-		
-
-	info!("final state {:?}", execution_state.executor().state());
 }
 
 #[allow(dead_code)]
@@ -146,7 +145,7 @@ pub fn contract_deploy() {
 	);
 	let execution_state = MemoryStorage::new(MemoryBackend::new(vicinity, state), BTreeMap::new());
 
-	let mut executor = execution_state.executor();
+	let mut executor = execution_state.executor(false);
 	let (reason, res) = executor.transact_create(
 		H160::from_str("0xe14de1592b52481b94b99df4e9653654e14fffb6").unwrap(), 
 		U256::zero(), 
@@ -163,6 +162,34 @@ pub fn contract_deploy() {
 	info!("{:?}", logs);
 
 
+}
+
+
+#[allow(dead_code)]
+pub fn tx_simulation_serial() {
+	let mut execution_state = MemoryStorage::default();
+
+	for _ in 0..10 {
+		let mut executor = execution_state.executor(true);
+		
+		let raw_tx = hex::decode("02f8f509887d0b53721cd770f6808088ffffffffffffffff94100000000000000000000000000000000000000080b8840be8374d0000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000000700000000000000000000000000000000000000000000000000000000000000053930383531000000000000000000000000000000000000000000000000000000c080a0bde42a3e09ccdc41d2729fc9d2ae0d54418dab8fa6e513984323e74b94a57b4ba07258cb57ad993e0048b0e05e8c2997d9b25f4a3df391738db275271a8a532485").unwrap();
+		
+		let tx = validate(raw_tx.as_slice());
+
+		let (reason, _) = executor.transact_call(
+			H160::from_str("0xe14de1592b52481b94b99df4e9653654e14fffb6").unwrap(),
+			tx.to_addr().unwrap().to_owned(),
+			tx.value().unwrap().to_owned(),
+			tx.data().unwrap().to_owned().to_vec(),
+			tx.gas().unwrap().to_owned().as_u64(),
+			Vec::new(),
+		);
+
+		info!("{reason:?}");
+		info!("{:?}\n\n", executor.rw_set());
+		let (effects, _) = executor.into_state().deconstruct();
+		info!("{:?}\n\n", effects);
+	}
 }
 
 /// Determines if a transaction valid for the worker to consider putting in a batch
