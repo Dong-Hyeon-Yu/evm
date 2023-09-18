@@ -9,8 +9,10 @@ use crate::{
 	Capture, Config, Context, CreateScheme, ExitError, ExitReason, Handler, Opcode, Runtime, Stack,
 	Transfer,
 };
+use alloc::collections::BTreeMap;
 use alloc::{collections::BTreeSet, rc::Rc, vec::Vec};
 use core::{cmp::min, convert::Infallible};
+use std::collections::HashSet;
 use evm_core::ExitFatal;
 use evm_runtime::Resolve;
 use primitive_types::{H160, H256, U256};
@@ -257,11 +259,39 @@ pub trait StackState<'config>: Backend {
 	fn refund_external_cost(&mut self, _ref_time: Option<u64>, _proof_size: Option<u64>) {}
 }
 
+
+pub trait Simulatable {
+	fn record_read_key(&mut self, address: H160, key: H256);
+	fn record_write_key(&mut self, address: H160, key: H256);
+}
+
+#[derive(Default, Clone, Debug)]
+pub struct RwSet {
+	read_set: BTreeMap<H160, HashSet<H256>>,
+	write_set: BTreeMap<H160, HashSet<H256>>,
+}
+
+impl Simulatable for RwSet {
+	fn record_read_key(&mut self, address: H160, key: H256) {
+		self.read_set
+			.entry(address)
+			.or_insert_with(HashSet::new)
+			.insert(key);
+	}
+
+	fn record_write_key(&mut self, address: H160, key: H256) {
+		self.write_set
+			.entry(address)
+			.or_insert_with(HashSet::new)
+			.insert(key);
+	}
+}
 /// Stack-based executor.
 pub struct StackExecutor<'config, 'precompiles, S, P> {
 	config: &'config Config,
 	state: S,
 	precompile_set: &'precompiles P,
+	rw_set: Option<RwSet>,
 }
 
 impl<'config, 'precompiles, S: StackState<'config>, P: PrecompileSet>
@@ -282,11 +312,21 @@ impl<'config, 'precompiles, S: StackState<'config>, P: PrecompileSet>
 		state: S,
 		config: &'config Config,
 		precompile_set: &'precompiles P,
+		simulation: bool,
 	) -> Self {
+		let mut rw_set = None;
+		if simulation {
+			rw_set = Some(RwSet {
+				read_set: BTreeMap::new(),
+				write_set: BTreeMap::new(),
+			});
+		}
+
 		Self {
 			config,
 			state,
 			precompile_set,
+			rw_set,
 		}
 	}
 
@@ -297,6 +337,11 @@ impl<'config, 'precompiles, S: StackState<'config>, P: PrecompileSet>
 	pub fn state_mut(&mut self) -> &mut S {
 		&mut self.state
 	}
+
+	pub fn rw_set(&mut self) -> Option<&mut RwSet> {
+		self.rw_set.as_mut()
+	}
+
 
 	pub fn into_state(self) -> S {
 		self.state
@@ -1104,11 +1149,17 @@ impl<'config, 'precompiles, S: StackState<'config>, P: PrecompileSet> Handler
 		self.state.code(address)
 	}
 
-	fn storage(&self, address: H160, index: H256) -> H256 {
+	fn storage(&mut self, address: H160, index: H256) -> H256 {
+		if let Some(rw_set) = self.rw_set() {
+			Simulatable::record_read_key(rw_set, address, index);
+		};
 		self.state.storage(address, index)
 	}
 
-	fn original_storage(&self, address: H160, index: H256) -> H256 {
+	fn original_storage(&mut self, address: H160, index: H256) -> H256 {
+		if let Some(rw_set) = self.rw_set() {
+			Simulatable::record_read_key(rw_set, address, index);
+		};
 		self.state
 			.original_storage(address, index)
 			.unwrap_or_default()
@@ -1192,6 +1243,9 @@ impl<'config, 'precompiles, S: StackState<'config>, P: PrecompileSet> Handler
 
 	fn set_storage(&mut self, address: H160, index: H256, value: H256) -> Result<(), ExitError> {
 		self.state.set_storage(address, index, value);
+		if let Some(rw_set) = self.rw_set() {
+			Simulatable::record_write_key(rw_set, address, index);
+		};
 		Ok(())
 	}
 

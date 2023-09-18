@@ -46,7 +46,7 @@ fn run_loop_contract() {
 	let metadata = StackSubstateMetadata::new(u64::MAX, &config);
 	let state = MemoryStackState::new(metadata, &backend);
 	let precompiles = BTreeMap::new();
-	let mut executor = StackExecutor::new_with_precompiles(state, &config, &precompiles);
+	let mut executor = StackExecutor::new_with_precompiles(state, &config, &precompiles, false);
 
 	let _reason = executor.transact_call(
 		H160::from_str("0xf000000000000000000000000000000000000000").unwrap(),
