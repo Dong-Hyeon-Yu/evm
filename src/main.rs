@@ -169,12 +169,11 @@ pub fn contract_deploy() {
 pub fn tx_simulation_serial() {
 	let mut execution_state = MemoryStorage::default();
 
+	let raw_tx = hex::decode("02f8f509887d0b53721cd770f6808088ffffffffffffffff94100000000000000000000000000000000000000080b8840be8374d0000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000000700000000000000000000000000000000000000000000000000000000000000053930383531000000000000000000000000000000000000000000000000000000c080a0bde42a3e09ccdc41d2729fc9d2ae0d54418dab8fa6e513984323e74b94a57b4ba07258cb57ad993e0048b0e05e8c2997d9b25f4a3df391738db275271a8a532485").unwrap();
+	let tx = validate(raw_tx.as_slice());
+
 	for _ in 0..10 {
 		let mut executor = execution_state.executor(true);
-		
-		let raw_tx = hex::decode("02f8f509887d0b53721cd770f6808088ffffffffffffffff94100000000000000000000000000000000000000080b8840be8374d0000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000000700000000000000000000000000000000000000000000000000000000000000053930383531000000000000000000000000000000000000000000000000000000c080a0bde42a3e09ccdc41d2729fc9d2ae0d54418dab8fa6e513984323e74b94a57b4ba07258cb57ad993e0048b0e05e8c2997d9b25f4a3df391738db275271a8a532485").unwrap();
-		
-		let tx = validate(raw_tx.as_slice());
 
 		let (reason, _) = executor.transact_call(
 			H160::from_str("0xe14de1592b52481b94b99df4e9653654e14fffb6").unwrap(),
@@ -187,8 +186,9 @@ pub fn tx_simulation_serial() {
 
 		info!("{reason:?}");
 		info!("{:?}\n\n", executor.rw_set());
-		let (effects, _) = executor.into_state().deconstruct();
+		let (effects, logs) = executor.into_state().deconstruct();
 		info!("{:?}\n\n", effects);
+		execution_state.apply_local_effect(effects, logs);
 	}
 }
 
@@ -202,7 +202,7 @@ fn validate(t: &[u8]) -> TypedTransaction {
 			if let Err(e) = sig.verify(tx.sighash(), *tx.from().unwrap()) {
 				panic!("invalid tx signature: {:?}", e);
 			}
-			info!("tx: {:?}", tx);
+			info!("tx: {:?}\n", tx);
 			tx
 		},
 		Err(e) => {
