@@ -271,6 +271,13 @@ pub struct RwSet {
 	write_set: BTreeMap<H160, HashSet<H256>>,
 }
 
+impl RwSet {
+	#[must_use]
+	pub fn destruct(self) -> (BTreeMap<H160, HashSet<H256>>, BTreeMap<H160, HashSet<H256>>) {
+		(self.read_set, self.write_set)
+	}
+}
+
 impl Simulatable for RwSet {
 	fn record_read_key(&mut self, address: H160, key: H256) {
 		self.read_set
