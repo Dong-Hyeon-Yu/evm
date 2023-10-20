@@ -12,7 +12,7 @@ use crate::{
 use alloc::collections::BTreeMap;
 use alloc::{collections::BTreeSet, rc::Rc, vec::Vec};
 use core::{cmp::min, convert::Infallible};
-use std::collections::HashSet;
+use std::collections::HashMap;
 use evm_core::ExitFatal;
 use evm_runtime::Resolve;
 use primitive_types::{H160, H256, U256};
@@ -261,36 +261,36 @@ pub trait StackState<'config>: Backend {
 
 
 pub trait Simulatable {
-	fn record_read_key(&mut self, address: H160, key: H256);
-	fn record_write_key(&mut self, address: H160, key: H256);
+	fn record_read_key(&mut self, address: H160, key: H256, value: H256);
+	fn record_write_key(&mut self, address: H160, key: H256, value: H256);
 }
 
 #[derive(Default, Clone, Debug)]
 pub struct RwSet {
-	read_set: BTreeMap<H160, HashSet<H256>>,
-	write_set: BTreeMap<H160, HashSet<H256>>,
+	read_set: BTreeMap<H160, HashMap<H256, H256>>,
+	write_set: BTreeMap<H160, HashMap<H256, H256>>,
 }
 
 impl RwSet {
 	#[must_use]
-	pub fn destruct(self) -> (BTreeMap<H160, HashSet<H256>>, BTreeMap<H160, HashSet<H256>>) {
+	pub fn destruct(self) -> (BTreeMap<H160, HashMap<H256, H256>>, BTreeMap<H160, HashMap<H256, H256>>) {
 		(self.read_set, self.write_set)
 	}
 }
 
 impl Simulatable for RwSet {
-	fn record_read_key(&mut self, address: H160, key: H256) {
+	fn record_read_key(&mut self, address: H160, key: H256, value: H256) {
 		self.read_set
 			.entry(address)
-			.or_insert_with(HashSet::new)
-			.insert(key);
+			.or_insert_with(HashMap::new)
+			.insert(key, value);
 	}
 
-	fn record_write_key(&mut self, address: H160, key: H256) {
+	fn record_write_key(&mut self, address: H160, key: H256, value: H256) {
 		self.write_set
 			.entry(address)
-			.or_insert_with(HashSet::new)
-			.insert(key);
+			.or_insert_with(HashMap::new)
+			.insert(key, value);
 	}
 }
 /// Stack-based executor.
@@ -1157,19 +1157,21 @@ impl<'config, 'precompiles, S: StackState<'config>, P: PrecompileSet> Handler
 	}
 
 	fn storage(&mut self, address: H160, index: H256) -> H256 {
+		let value = self.state.storage(address, index);
 		if let Some(rw_set) = self.rw_set() {
-			Simulatable::record_read_key(rw_set, address, index);
+			Simulatable::record_read_key(rw_set, address, index, value);
 		};
-		self.state.storage(address, index)
+		value
 	}
 
 	fn original_storage(&mut self, address: H160, index: H256) -> H256 {
-		if let Some(rw_set) = self.rw_set() {
-			Simulatable::record_read_key(rw_set, address, index);
-		};
-		self.state
+		let value = self.state
 			.original_storage(address, index)
-			.unwrap_or_default()
+			.unwrap_or_default();
+		if let Some(rw_set) = self.rw_set() {
+			Simulatable::record_read_key(rw_set, address, index, value);
+		};
+		value
 	}
 
 	fn exists(&self, address: H160) -> bool {
@@ -1251,7 +1253,7 @@ impl<'config, 'precompiles, S: StackState<'config>, P: PrecompileSet> Handler
 	fn set_storage(&mut self, address: H160, index: H256, value: H256) -> Result<(), ExitError> {
 		self.state.set_storage(address, index, value);
 		if let Some(rw_set) = self.rw_set() {
-			Simulatable::record_write_key(rw_set, address, index);
+			Simulatable::record_write_key(rw_set, address, index, value);
 		};
 		Ok(())
 	}
