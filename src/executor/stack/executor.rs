@@ -276,6 +276,13 @@ impl RwSet {
 	pub fn destruct(self) -> (BTreeMap<H160, HashMap<H256, H256>>, BTreeMap<H160, HashMap<H256, H256>>) {
 		(self.read_set, self.write_set)
 	}
+
+	pub fn new() -> Self {
+		RwSet {
+			read_set: BTreeMap::new(),
+			write_set: BTreeMap::new(),
+		}
+	}
 }
 
 impl Simulatable for RwSet {
@@ -323,10 +330,7 @@ impl<'config, 'precompiles, S: StackState<'config>, P: PrecompileSet>
 	) -> Self {
 		let mut rw_set = None;
 		if simulation {
-			rw_set = Some(RwSet {
-				read_set: BTreeMap::new(),
-				write_set: BTreeMap::new(),
-			});
+			rw_set = Some(RwSet::new());
 		}
 
 		Self {
