@@ -283,6 +283,14 @@ impl RwSet {
 			write_set: BTreeMap::new(),
 		}
 	}
+
+	pub fn writes(&self) -> &BTreeMap<H160, HashMap<H256, H256>> {
+		&self.write_set
+	}
+
+	pub fn reads(&self) -> &BTreeMap<H160, HashMap<H256, H256>> {
+		&self.read_set
+	}
 }
 
 impl Simulatable for RwSet {
