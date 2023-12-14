@@ -8,9 +8,22 @@ repository = "https://github.com/sorpaas/rust-evm"
 keywords = ["no_std", "ethereum"]
 edition = "2018"
 
+[workspace]
+members = [
+	"core",
+	"gasometer",
+	"runtime",
+	"fuzzer",
+]
+
+[workspace.dependencies]
+cfg-if = "1.0.0"
+
 [dependencies]
+anyhow = "1.0.52"
 auto_impl = "1.0"
-ethereum = { version = "0.14", default-features = false }
+cfg-if.workspace = true
+ethereum = { version = "0.15", default-features = false }
 log = { version = "0.4", default-features = false }
 primitive-types = { version = "0.12", default-features = false, features = ["rlp"] }
 rlp = { version = "0.5", default-features = false }
@@ -69,11 +82,5 @@ tracing = [
 	"evm-gasometer/tracing",
 	"evm-runtime/tracing",
 ]
+mvcc = ["std", "evm-runtime/mvcc", "evm-gasometer/mvcc"]
 
-[workspace]
-members = [
-	"core",
-	"gasometer",
-	"runtime",
-	"fuzzer",
-]

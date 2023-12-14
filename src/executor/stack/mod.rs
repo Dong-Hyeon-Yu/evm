@@ -8,7 +8,7 @@ mod precompile;
 mod tagged_runtime;
 
 pub use self::executor::{
-	Accessed, StackExecutor, StackExitKind, StackState, StackSubstateMetadata, RwSet, Simulatable
+	Accessed, StackExecutor, StackExitKind, StackState, StackSubstateMetadata, RwSet, Simulatable, MultiversionStackExecutor, MultiversionView
 };
 pub use self::memory::{MemoryStackAccount, MemoryStackState, MemoryStackSubstate};
 pub use self::precompile::{
@@ -16,3 +16,4 @@ pub use self::precompile::{
 	PrecompileSet,
 };
 pub use ethereum::Log;
+

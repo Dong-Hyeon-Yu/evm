@@ -10,6 +10,7 @@ edition = "2018"
 
 [dependencies]
 auto_impl = "1.0"
+cfg-if.workspace = true
 environmental = { version = "1.1.2", default-features = false, optional = true }
 primitive-types = { version = "0.12", default-features = false }
 sha3 = { version = "0.10", default-features = false }
@@ -27,3 +28,4 @@ std = [
 tracing = [
 	"environmental",
 ]
+mvcc = ["std"]

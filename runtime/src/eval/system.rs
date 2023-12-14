@@ -218,17 +218,36 @@ pub fn gaslimit<H: Handler>(runtime: &mut Runtime, handler: &H) -> Control<H> {
 }
 
 pub fn sload<H: Handler>(runtime: &mut Runtime, handler: &mut H) -> Control<H> {
-	pop!(runtime, index);
-	let value = handler.storage(runtime.context.address, index);
-	push!(runtime, value);
-
-	event!(SLoad {
-		address: runtime.context.address,
-		index,
-		value
-	});
-
-	Control::Continue
+	cfg_if::cfg_if! {
+		if #[cfg(feature = "mvcc")] {
+			pop!(runtime, index);
+			match handler.storage(runtime.context.address, index) {
+				Ok(value) => {
+					push!(runtime, value);
+					event!(SLoad {
+						address: runtime.context.address,
+						index,
+						value
+					});
+					
+					Control::Continue
+				},
+				Err(e) => Control::Exit(e.into())
+			}
+		}
+		else {
+			pop!(runtime, index);
+			let value = handler.storage(runtime.context.address, index).unwrap();
+			push!(runtime, value);
+			event!(SLoad {
+				address: runtime.context.address,
+				index,
+				value
+			});
+		
+			Control::Continue
+		}
+	}
 }
 
 pub fn sstore<H: Handler>(runtime: &mut Runtime, handler: &mut H) -> Control<H> {

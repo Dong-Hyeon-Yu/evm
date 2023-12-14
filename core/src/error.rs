@@ -160,6 +160,10 @@ pub enum ExitError {
 	/// https://eips.ethereum.org/EIPS/eip-2681
 	#[cfg_attr(feature = "with-codec", codec(index = 14))]
 	MaxNonce,
+
+	// blockstm specific error
+	#[cfg_attr(feature = "with-codec", codec(index = 16))]
+	NotEstimatedYet,
 }
 
 impl From<ExitError> for ExitReason {

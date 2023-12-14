@@ -578,11 +578,31 @@ pub fn dynamic_opcode_cost<H: Handler>(
 			let value = stack.peek(1)?;
 			storage_target = StorageTarget::Slot(address, index);
 
-			GasCost::SStore {
-				original: handler.original_storage(address, index),
-				current: handler.storage(address, index),
-				new: value,
-				target_is_cold: handler.is_cold(address, Some(index))?,
+			cfg_if::cfg_if! {
+				if #[cfg(feature="mvcc")] {
+					if let Ok(origin_value) = handler.original_storage(address, index) {
+						if let Ok(cur_value) =  handler.storage(address, index) {
+							GasCost::SStore {
+								original: origin_value,
+								current: cur_value,
+								new: value,
+								target_is_cold: handler.is_cold(address, Some(index))?,
+							}
+						} else {
+							return Err(ExitError::NotEstimatedYet);
+						}
+					} else {
+						return Err(ExitError::NotEstimatedYet);
+					}
+				}
+				else {
+					GasCost::SStore {
+						original: handler.original_storage(address, index).unwrap(),
+						current: handler.storage(address, index).unwrap(),
+						new: value,
+						target_is_cold: handler.is_cold(address, Some(index))?,
+					}
+				}
 			}
 		}
 		Opcode::LOG0 if !is_static => GasCost::Log {
