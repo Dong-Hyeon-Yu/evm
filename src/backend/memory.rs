@@ -1,5 +1,4 @@
 use super::{Apply, ApplyBackend, Backend, Basic, Log};
-use alloc::collections::BTreeMap;
 use alloc::vec::Vec;
 use primitive_types::{H160, H256, U256};
 
@@ -51,7 +50,7 @@ pub struct MemoryAccount {
 	/// Account balance.
 	pub balance: U256,
 	/// Full account storage.
-	pub storage: BTreeMap<H256, H256>,
+	pub storage: hashbrown::HashMap<H256, H256>,
 	/// Account code.
 	pub code: Vec<u8>,
 }
@@ -60,13 +59,13 @@ pub struct MemoryAccount {
 #[derive(Clone, Debug)]
 pub struct MemoryBackend {
 	vicinity: MemoryVicinity,
-	state: BTreeMap<H160, MemoryAccount>,
+	state: hashbrown::HashMap<H160, MemoryAccount>,
 	logs: Vec<Log>,
 }
 
 impl MemoryBackend {
 	/// Create a new memory backend.
-	pub fn new(vicinity: MemoryVicinity, state: BTreeMap<H160, MemoryAccount>) -> Self {
+	pub fn new(vicinity: MemoryVicinity, state: hashbrown::HashMap<H160, MemoryAccount>) -> Self {
 		Self {
 			vicinity,
 			state,
@@ -75,12 +74,12 @@ impl MemoryBackend {
 	}
 
 	/// Get the underlying `BTreeMap` storing the state.
-	pub fn state(&self) -> &BTreeMap<H160, MemoryAccount> {
+	pub fn state(&self) -> &hashbrown::HashMap<H160, MemoryAccount> {
 		&self.state
 	}
 
 	/// Get a mutable reference to the underlying `BTreeMap` storing the state.
-	pub fn state_mut(&mut self) -> &mut BTreeMap<H160, MemoryAccount> {
+	pub fn state_mut(&mut self) -> &mut hashbrown::HashMap<H160, MemoryAccount> {
 		&mut self.state
 	}
 }
@@ -163,8 +162,7 @@ impl Backend for MemoryBackend {
 }
 
 impl ApplyBackend for MemoryBackend {
-	fn apply(&mut self, values: Vec<Apply>, logs: Vec<Log>, delete_empty: bool)
-	{
+	fn apply(&mut self, values: Vec<Apply>, logs: Vec<Log>, delete_empty: bool) {
 		for apply in values {
 			match apply {
 				Apply::Modify {
@@ -183,7 +181,7 @@ impl ApplyBackend for MemoryBackend {
 						}
 
 						if reset_storage {
-							account.storage = BTreeMap::new();
+							account.storage = hashbrown::HashMap::default();
 						}
 
 						let zeros = account
