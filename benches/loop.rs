@@ -22,13 +22,13 @@ fn run_loop_contract() {
 		block_randomness: None,
 	};
 
-	let mut state = BTreeMap::new();
+	let mut state = hashbrown::HashMap::default();
 	state.insert(
 		H160::from_str("0x1000000000000000000000000000000000000000").unwrap(),
 		MemoryAccount {
 			nonce: U256::one(),
 			balance: U256::from(10000000),
-			storage: BTreeMap::new(),
+			storage: hashbrown::HashMap::default(),
 			code: hex::decode("6080604052348015600f57600080fd5b506004361060285760003560e01c80630f14a40614602d575b600080fd5b605660048036036020811015604157600080fd5b8101908080359060200190929190505050606c565b6040518082815260200191505060405180910390f35b6000806000905060005b83811015608f5760018201915080806001019150506076565b508091505091905056fea26469706673582212202bc9ec597249a9700278fe4ce78da83273cb236e76d4d6797b441454784f901d64736f6c63430007040033").unwrap(),
 		}
 	);
@@ -37,7 +37,7 @@ fn run_loop_contract() {
 		MemoryAccount {
 			nonce: U256::one(),
 			balance: U256::from(10000000),
-			storage: BTreeMap::new(),
+			storage: hashbrown::HashMap::default(),
 			code: Vec::new(),
 		},
 	);
